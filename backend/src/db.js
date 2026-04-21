@@ -1,11 +1,16 @@
-const mysql = require('mysql2/promise');
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10
-});
-module.exports = pool;
+const mongoose = require('mongoose');
 
+async function connectDB() {
+  try {
+    await mongoose.connect('mongodb://localhost:27017/stargazer', {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    console.log('数据库连接成功');
+  } catch (error) {
+    console.error('数据库连接失败:', error);
+    process.exit(1);
+  }
+}
+
+module.exports = connectDB;

@@ -1,30 +1,118 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
-const pool = require('../db');
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'stargazer-secret';
-const auth = async (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) return res.json({ code: 401, msg: '未登录' });
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.userId = decoded.userId;
-    next();
-  } catch (err) { res.json({ code: 401, msg: 'token无效' }); }
-};
-router.get('/profile', auth, async (req, res) => {
-  try {
-    const [users] = await pool.query('SELECT * FROM user_profiles WHERE user_id = ?', [req.userId]);
-    res.json({ code: 200, data: users[0] || {} });
-  } catch (err) { res.json({ code: 500, msg: '服务器错误' }); }
-});
-router.post('/profile', auth, async (req, res) => {
-  try {
-    const { name, birth_date, birth_time, city, hour, minute } = req.body;
-    await pool.query('INSERT INTO user_profiles (user_id, name, birth_date, birth_time, city) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=?, birth_date=?, birth_time=?, city=?',
-      [req.userId, name, birth_date, birth_time, city, name, birth_date, birth_time, city]);
-    res.json({ code: 200, msg: '保存成功' });
-  } catch (err) { res.json({ code: 500, msg: '保存失败' }); }
-});
-module.exports = router;
 
+const users = [
+  { id: 1, username: 'test', password: '123456', email: 'test@example.com', name: '测试用户' }
+];
+
+router.get('/info', (req, res) => {
+  const { userId } = req.query;
+  
+  if (!userId) {
+    return res.status(400).json({ error: '用户ID不能为空' });
+  }
+  
+  const user = users.find(user => user.id == userId);
+  
+  if (!user) {
+    return res.status(404).json({ error: '用户不存在' });
+  }
+  
+  res.json({ 
+    success: true, 
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name
+    }
+  });
+});
+
+router.put('/update', (req, res) => {
+  const { userId, name, email } = req.body;
+  
+  if (!userId) {
+    return res.status(400).json({ error: '用户ID不能为空' });
+  }
+  
+  const user = users.find(user => user.id == userId);
+  
+  if (!user) {
+    return res.status(404).json({ error: '用户不存在' });
+  }
+  
+  if (name) user.name = name;
+  if (email) user.email = email;
+  
+  res.json({ 
+    success: true, 
+    message: '用户信息更新成功',
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name
+    }
+  });
+});
+
+router.post('/booking', (req, res) => {
+  const { userId, consultationType, contactInfo, consultationDate, consultationTime, consultationTopic } = req.body;
+  
+  if (!userId || !consultationType || !contactInfo || !consultationDate || !consultationTime || !consultationTopic) {
+    return res.status(400).json({ error: '预约信息不完整' });
+  }
+  
+  console.log('收到预约:', {
+    userId,
+    consultationType,
+    contactInfo,
+    consultationDate,
+    consultationTime,
+    consultationTopic
+  });
+  
+  res.json({ 
+    success: true, 
+    message: '预约成功！专业占星师将在约定时间与您联系。' 
+  });
+});
+
+router.get('/bookings', (req, res) => {
+  const { userId } = req.query;
+  
+  if (!userId) {
+    return res.status(400).json({ error: '用户ID不能为空' });
+  }
+  
+  const bookings = [
+    {
+      id: 1,
+      consultationType: '60min',
+      contactInfo: '13800138000',
+      consultationDate: '2024-01-15',
+      consultationTime: '14:00',
+      consultationTopic: '职业发展',
+      status: '已完成',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 2,
+      consultationType: '30min',
+      contactInfo: '13800138000',
+      consultationDate: '2024-01-20',
+      consultationTime: '10:30',
+      consultationTopic: '感情关系',
+      status: '待确认',
+      createdAt: new Date().toISOString()
+    }
+  ];
+  
+  res.json({ 
+    success: true, 
+    bookings 
+  });
+});
+
+module.exports = router;

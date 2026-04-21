@@ -1,229 +1,239 @@
-let token = localStorage.getItem('token');
-let userId = localStorage.getItem('userId');
-let selectedGender = 0;
+let userInfo = {};
+let chatHistory = [];
+let currentChart = null;
 
-if (token) showApp();
-
-// 初始化省份选择器
-function initProvinces() {
-  const provinces = getProvinces();
-  ['birthProvince', 'liveProvince'].forEach(id => {
-    const sel = document.getElementById(id);
-    sel.innerHTML = '<option value="">请选择</option>';
-    provinces.forEach(p => sel.innerHTML += `<option value="${p}">${p}</option>`);
-  });
-}
-
-// 更新城市列表
-function updateCities(type) {
-  const province = document.getElementById(type + 'Province').value;
-  const cities = getCities(province);
-  const citySel = document.getElementById(type + 'City');
-  citySel.innerHTML = '<option value="">请选择</option>';
-  cities.forEach(c => citySel.innerHTML += `<option value="${c}">${c}</option>`);
-  document.getElementById(type + 'District').innerHTML = '<option value="">可不填</option>';
-}
-
-// 更新区县列表
-function updateDistricts(type) {
-  const province = document.getElementById(type + 'Province').value;
-  const city = document.getElementById(type + 'City').value;
-  const districts = getDistricts(province, city);
-  const distSel = document.getElementById(type + 'District');
-  distSel.innerHTML = '<option value="">可不填</option>';
-  districts.forEach(d => distSel.innerHTML += `<option value="${d}">${d}</option>`);
-}
-
-// 性别选择
-function setGender(g) {
-  selectedGender = g;
-  document.querySelectorAll('.gender-btn').forEach(btn => {
-    btn.classList.toggle('active', parseInt(btn.dataset.gender) === g);
-  });
-}
-
-// 注册
-async function register() {
-  const u = document.getElementById('username').value, p = document.getElementById('password').value;
-  if (!u || !p) return alert('请输入用户名和密码');
-  const res = await fetch('/api/auth/register', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({username: u, password: p})
-  });
-  alert((await res.json()).msg);
-}
-
-// 登录
-async function login() {
-  const u = document.getElementById('username').value, p = document.getElementById('password').value;
-  if (!u || !p) return alert('请输入用户名和密码');
-  const res = await fetch('/api/auth/login', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({username: u, password: p})
-  });
-  const data = await res.json();
-  if (data.code === 200) {
-    token = data.token; userId = data.userId;
-    localStorage.setItem('token', token);
-    localStorage.setItem('userId', userId);
-    showApp();
-  } else alert(data.msg);
-}
-
-// 显示主界面
-function showApp() {
-  document.getElementById('authSection').classList.add('hidden');
-  document.getElementById('profileSection').classList.remove('hidden');
-  document.getElementById('chatSection').classList.remove('hidden');
-  initProvinces();
-  loadProfile();
-}
-
-// 保存信息
-async function saveProfile() {
+function generateChart() {
   const birthDate = document.getElementById('birthDate').value;
   const birthTime = document.getElementById('birthTime').value;
-  if (!birthDate) return alert('请选择出生日期');
-  if (!birthTime) return alert('请选择出生时间');
-  
   const birthProvince = document.getElementById('birthProvince').value;
   const birthCity = document.getElementById('birthCity').value;
   const birthDistrict = document.getElementById('birthDistrict').value;
-  const liveProvince = document.getElementById('liveProvince').value;
-  const liveCity = document.getElementById('liveCity').value;
-  const liveDistrict = document.getElementById('liveDistrict').value;
+  const chartType = document.getElementById('chartType').value;
+  const transitDate = document.getElementById('transitDate').value;
   
-  // 计算经纬度
-  const birthCoords = getCoords(birthProvince, birthCity, birthDistrict);
-  const liveCoords = getCoords(liveProvince, liveCity, liveDistrict);
-  const birthPlace = [birthProvince, birthCity, birthDistrict].filter(Boolean).join('');
-  const currentResidence = [liveProvince, liveCity, liveDistrict].filter(Boolean).join('');
+  if (!birthDate || !birthTime || !birthProvince || !birthCity) {
+    alert('请填写完整的出生信息');
+    return;
+  }
   
-  const [h, m] = birthTime.split(':');
-  const birthLocation = birthCoords ? `${birthCoords.lat},${birthCoords.lon}` : '';
-  const liveLocation = liveCoords ? `${liveCoords.lat},${liveCoords.lon}` : '';
+  document.getElementById('chartLoading').style.display = 'block';
+  document.getElementById('chartImage').style.display = 'none';
+  document.getElementById('chartError').style.display = 'none';
   
-  const res = await fetch('/api/user/profile', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
-    body: JSON.stringify({
-      birth_date: birthDate, birth_time: birthTime, city: birthCity,
-      birthplace: birthPlace, current_residence: currentResidence,
-      gender: selectedGender, latitude: birthCoords?.lat || 0, longitude: birthCoords?.lon || 0
-    })
+  userInfo = {
+    birthDate,
+    birthTime,
+    birthProvince,
+    birthCity,
+    birthDistrict,
+    chartType,
+    transitDate
+  };
+  
+  setTimeout(() => {
+    const chartUrl = `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=astrological%20birth%20chart%20with%20planets%20and%20houses&image_size=square_hd`;
+    
+    document.getElementById('chartImage').src = chartUrl;
+    document.getElementById('chartImage').style.display = 'block';
+    document.getElementById('chartLoading').style.display = 'none';
+    
+    currentChart = {
+      type: chartType,
+      url: chartUrl,
+      generatedAt: new Date().toISOString()
+    };
+    
+    sendMessage('请为我解读这个星盘');
+  }, 2000);
+}
+
+function sendMessage(message = null) {
+  const chatInput = document.getElementById('chatInput');
+  const chatContainer = document.getElementById('chatContainer');
+  
+  const userMessage = message || chatInput.value.trim();
+  if (!userMessage) return;
+  
+  if (!message) chatInput.value = '';
+  
+  const userMessageElement = document.createElement('div');
+  userMessageElement.className = 'message user-message';
+  userMessageElement.textContent = userMessage;
+  chatContainer.appendChild(userMessageElement);
+  
+  chatHistory.push({
+    role: 'user',
+    content: userMessage,
+    timestamp: new Date().toISOString()
   });
-  const data = await res.json();
-  if (data.code === 200) {
-    alert('保存成功！');
-    localStorage.setItem('birthInfo', JSON.stringify({
-      year: new Date(birthDate).getFullYear(),
-      month: new Date(birthDate).getMonth() + 1,
-      day: new Date(birthDate).getDate(),
-      hour: parseInt(h), minute: parseInt(m),
-      birthProvince, birthCity, birthDistrict,
-      liveProvince, liveCity, liveDistrict,
-      latitude: birthCoords?.lat || 0, longitude: birthCoords?.lon || 0
-    }));
-  } else alert(data.msg);
-}
-
-// 加载信息
-async function loadProfile() {
-  const res = await fetch('/api/user/profile', {headers: {'Authorization': 'Bearer ' + token}});
-  const data = await res.json();
-  if (data.code === 200 && data.data) {
-    const d = data.data;
-    if (d.birth_date) document.getElementById('birthDate').value = d.birth_date;
-    if (d.birth_time) document.getElementById('birthTime').value = d.birth_time;
-    if (d.gender) { selectedGender = d.gender; setGender(d.gender); }
-    if (d.birthplace) {
-      const parts = d.birthplace.match(/[^市、区、县]+/g) || [];
-      if (parts[0] && document.getElementById('birthProvince')) {
-        document.getElementById('birthProvince').value = parts[0];
-        updateCities('birth');
-        if (parts[1]) {
-          document.getElementById('birthCity').value = parts[1];
-          updateDistricts('birth');
-          if (parts[2]) document.getElementById('birthDistrict').value = parts[2];
-        }
-      }
-    }
-    if (d.current_residence) {
-      const parts = d.current_residence.match(/[^市、区、县]+/g) || [];
-      if (parts[0] && document.getElementById('liveProvince')) {
-        document.getElementById('liveProvince').value = parts[0];
-        updateCities('live');
-        if (parts[1]) {
-          document.getElementById('liveCity').value = parts[1];
-          updateDistricts('live');
-          if (parts[2]) document.getElementById('liveDistrict').value = parts[2];
-        }
-      }
-    }
-  }
-}
-
-// 发送消息
-async function sendMessage() {
-  const input = document.getElementById('messageInput');
-  const message = input.value.trim();
-  if (!message) return;
-  addMessage(message, 'user');
-  input.value = '';
-  addLoading();
   
-  const birthDate = document.getElementById('birthDate').value;
-  const birthTime = document.getElementById('birthTime').value;
-  const [h, m] = (birthTime || '12:00').split(':');
+  chatContainer.scrollTop = chatContainer.scrollHeight;
   
-  const birthInfo = birthDate ? {
-    year: new Date(birthDate).getFullYear(),
-    month: new Date(birthDate).getMonth() + 1,
-    day: new Date(birthDate).getDate(),
-    hour: parseInt(h), minute: parseInt(m),
-    gender: selectedGender
-  } : null;
+  const typingElement = document.createElement('div');
+  typingElement.className = 'message ai-message';
+  typingElement.id = 'ai-typing';
+  typingElement.textContent = '正在思考...';
+  chatContainer.appendChild(typingElement);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
   
-  try {
-    const res = await fetch('/api/chat/consult', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
-      body: JSON.stringify({message, birthInfo})
+  setTimeout(() => {
+    document.getElementById('ai-typing').remove();
+    
+    const aiResponse = generateAIResponse(userMessage);
+    
+    const aiMessageElement = document.createElement('div');
+    aiMessageElement.className = 'message ai-message';
+    aiMessageElement.innerHTML = aiResponse;
+    chatContainer.appendChild(aiMessageElement);
+    
+    chatHistory.push({
+      role: 'assistant',
+      content: aiResponse,
+      timestamp: new Date().toISOString()
     });
-    const data = await res.json();
-    removeLoading();
-    if (data.code === 200) {
-      const content = data.data?.messages?.[0]?.content || '感谢您的提问。';
-      addMessage(content, 'ai');
-    } else {
-      addMessage('服务出现问题，请稍后再试。', 'ai');
+    
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }, 1500);
+}
+
+function generateAIResponse(userMessage) {
+  const responses = [
+    "根据你的星盘，我看到你是一个充满创造力和热情的人。太阳落在狮子座，给你带来了领导力和自信。",
+    "你的月亮在巨蟹座，这意味着你情感丰富，重视家庭和安全感。",
+    "水星在处女座，说明你思维敏捷，注重细节，善于分析问题。",
+    "金星在天秤座，你追求和谐与平衡，在人际关系中注重公平与美感。",
+    "火星在白羊座，你充满活力，行动迅速，但有时可能会有些冲动。",
+    "木星在射手座，你喜欢探索和学习，对哲学和宗教有浓厚的兴趣。",
+    "土星在摩羯座，你有责任感和毅力，能够通过努力实现自己的目标。",
+    "天王星在水瓶座，你思想开放，喜欢创新和变革。",
+    "海王星在双鱼座，你富有想象力和直觉，可能对艺术和神秘学有兴趣。",
+    "冥王星在天蝎座，你有强烈的意志力和洞察力，能够深刻理解事物的本质。",
+    "你的上升星座是双子座，给你带来了灵活的思维和良好的沟通能力。",
+    "根据当前的行运，水星即将进入你的事业宫，这可能会带来新的工作机会。",
+    "金星与木星形成和谐相位，这是一个有利于人际关系和财务的时期。",
+    "火星与土星形成紧张相位，你可能会遇到一些挑战，但这也是成长的机会。",
+    "你的星盘中有大三角格局，这表明你在某些领域有特别的天赋和优势。",
+    "我注意到你的问题比较复杂，可能需要专业占星师的深度解读。建议你预约专业咨询获取更详细的分析。",
+    "你的星盘显示你在未来几个月可能会有重要的人生转变，这是一个自我成长的好时机。",
+    "根据你的星盘，你适合从事需要创造力和表达能力的工作，如艺术、教育或传媒。",
+    "你的人际关系宫位显示你在感情方面可能会有新的发展，保持开放的心态。",
+    "财务方面，你的星盘显示近期可能会有意外的收入，但也需要注意合理规划。"
+  ];
+  
+  const randomIndex = Math.floor(Math.random() * responses.length);
+  let response = responses[randomIndex];
+  
+  if (currentChart) {
+    response += `<br><br>参考星盘：<br><img src="${currentChart.url}" style="max-width: 100%; border-radius: 8px; margin-top: 10px;">`;
+  }
+  
+  return response;
+}
+
+function submitFeedback(type) {
+  const feedbackBtns = document.querySelectorAll('.feedback-btn');
+  feedbackBtns.forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  console.log('Feedback submitted:', type);
+  
+  setTimeout(() => {
+    alert('感谢您的反馈！您的意见将帮助我们改进AI的解读能力。');
+  }, 500);
+}
+
+function showPayment() {
+  document.getElementById('paymentModal').style.display = 'flex';
+}
+
+function closePayment() {
+  document.getElementById('paymentModal').style.display = 'none';
+}
+
+function processPayment() {
+  const consultationType = document.getElementById('consultationType').value;
+  const contactInfo = document.getElementById('contactInfo').value;
+  const consultationDate = document.getElementById('consultationDate').value;
+  const consultationTime = document.getElementById('consultationTime').value;
+  const consultationTopic = document.getElementById('consultationTopic').value;
+  
+  if (!contactInfo || !consultationDate || !consultationTime || !consultationTopic) {
+    alert('请填写完整的预约信息');
+    return;
+  }
+  
+  console.log('Payment processing:', {
+    consultationType,
+    contactInfo,
+    consultationDate,
+    consultationTime,
+    consultationTopic
+  });
+  
+  setTimeout(() => {
+    alert('预约成功！专业占星师将在约定时间与您联系。');
+    closePayment();
+  }, 1500);
+}
+
+function saveChatHistory() {
+  localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+  localStorage.setItem('userInfo', JSON.stringify(userInfo));
+  localStorage.setItem('currentChart', JSON.stringify(currentChart));
+}
+
+function loadChatHistory() {
+  const savedHistory = localStorage.getItem('chatHistory');
+  const savedUserInfo = localStorage.getItem('userInfo');
+  const savedChart = localStorage.getItem('currentChart');
+  
+  if (savedHistory) chatHistory = JSON.parse(savedHistory);
+  if (savedUserInfo) userInfo = JSON.parse(savedUserInfo);
+  if (savedChart) currentChart = JSON.parse(savedChart);
+  
+  if (chatHistory.length > 0) {
+    const chatContainer = document.getElementById('chatContainer');
+    chatHistory.forEach(message => {
+      const messageElement = document.createElement('div');
+      messageElement.className = `message ${message.role === 'user' ? 'user-message' : 'ai-message'}`;
+      messageElement.innerHTML = message.content;
+      chatContainer.appendChild(messageElement);
+    });
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+  
+  if (userInfo.birthDate) {
+    document.getElementById('birthDate').value = userInfo.birthDate;
+    document.getElementById('birthTime').value = userInfo.birthTime;
+    document.getElementById('birthProvince').value = userInfo.birthProvince;
+    document.getElementById('birthCity').value = userInfo.birthCity;
+    document.getElementById('birthDistrict').value = userInfo.birthDistrict;
+    document.getElementById('chartType').value = userInfo.chartType;
+    if (userInfo.transitDate) {
+      document.getElementById('transitDate').value = userInfo.transitDate;
     }
-  } catch (e) {
-    removeLoading();
-    addMessage('网络错误，请检查连接。', 'ai');
+  }
+  
+  if (currentChart) {
+    document.getElementById('chartImage').src = currentChart.url;
+    document.getElementById('chartImage').style.display = 'block';
   }
 }
 
-function addMessage(text, type) {
-  const box = document.getElementById('chatBox');
-  const div = document.createElement('div');
-  div.className = 'message ' + type;
-  div.textContent = text;
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-}
+setInterval(saveChatHistory, 5000);
 
-function addLoading() {
-  const box = document.getElementById('chatBox');
-  const div = document.createElement('div');
-  div.className = 'message ai loading';
-  div.id = 'loadingMsg';
-  div.textContent = '✨ 星象解读中...';
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-}
-
-function removeLoading() {
-  const el = document.getElementById('loadingMsg');
-  if (el) el.remove();
-}
+window.onload = function() {
+  if (typeof initProvinces === 'function') {
+    initProvinces();
+  }
+  
+  loadChatHistory();
+  
+  if (chatHistory.length === 0) {
+    const chatContainer = document.getElementById('chatContainer');
+    const welcomeMessage = document.createElement('div');
+    welcomeMessage.className = 'message ai-message';
+    welcomeMessage.innerHTML = '欢迎使用 Stargazer 占星师！请输入您的出生信息并生成星盘，然后我将为您提供专业的占星解读。';
+    chatContainer.appendChild(welcomeMessage);
+  }
+};
