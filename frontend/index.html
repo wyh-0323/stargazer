@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stargazer 占星师</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:linear-gradient(135deg,#1a1a2e,#16213e);min-height:100vh;color:#fff}
+    .container{max-width:600px;margin:0 auto;padding:20px}
+    .header{text-align:center;padding:30px 0}
+    .header h1{font-size:28px;margin-bottom:10px}
+    .card{background:rgba(255,255,255,0.1);border-radius:16px;padding:24px;margin-bottom:20px}
+    .form-group{margin-bottom:16px}
+    .form-group label{display:block;margin-bottom:6px;color:#a0a0a}
+    .form-group input{width:100%;padding:12px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(255,255,255,0.1);color:#fff}
+    .btn{width:100%;padding:14px;border:none;border-radius:8px;font-size:16px;cursor:pointer;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+    .chat-box{height:400px;overflow-y:auto;padding:16px;background:rgba(0,0,0,0.2);border-radius:12px;margin-bottom:16px}
+    .message{margin-bottom:12px;padding:12px 16px;border-radius:12px;max-width:85%}
+    .message.user{background:#667eea;margin-left:auto}
+    .message.ai{background:rgba(255,255,255,0.15)}
+    textarea{width:100%;padding:12px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(255,255,255,0.1);color:#fff;resize:none;height:80px}
+    .hidden{display:none}
+    .auth-section{display:flex;gap:10px}
+    .auth-section input{flex:1}
+    .location-type{display:flex;gap:10px;margin-bottom:16px}
+    .location-radio{display:flex;align-items:center;padding:12px;background:rgba(255,255,255,0.1);border-radius:8px;flex:1}
+    .location-radio input{margin-right:8px}
+    .gender-group{display:flex;gap:10px;margin-bottom:16px}
+    .gender-radio{display:flex;align-items:center;padding:12px;background:rgba(255,255,255,0.1);border-radius:8px;flex:1}
+    .gender-radio input{margin-right:8px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>✨ Stargazer</h1>
+      <p>你的专属占星师</p>
+    </div>
+    
+    <div id="authSection" class="card">
+      <div class="auth-section">
+        <input type="text" id="username" placeholder="用户名">
+        <input type="password" id="password" placeholder="密码">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button class="btn" onclick="register()">注册</button>
+        <button class="btn" onclick="login()">登录</button>
+      </div>
+    </div>
+    
+    <div id="profileSection" class="card hidden">
+      <h3 style="margin-bottom:16px;">📝 出生信息</h3>
+      
+      <div class="gender-group">
+        <label class="gender-radio">
+          <input type="radio" name="gender" value="male" checked>
+          <span>♂ 男生</span>
+        </label>
+        <label class="gender-radio">
+          <input type="radio" name="gender" value="female">
+          <span>♀ 女生</span>
+        </label>
+      </div>
+      
+      <div class="location-type">
+        <label class="location-radio">
+          <input type="radio" name="locationType" value="city" checked onchange="toggleLocationType()" id="cityRadio">
+          <span>出生地</span>
+        </label>
+        <label class="location-radio">
+          <input type="radio" name="locationType" value="coordinates" onchange="toggleLocationType()" id="coordRadio">
+          <span>现居地</span>
+        </label>
+      </div>
+      
+      <div class="form-group">
+        <label>出生日期</label>
+        <input type="date" id="birthDate">
+      </div>
+      <div class="form-group">
+        <label>出生时间</label>
+        <input type="time" id="birthTime" value="12:00">
+      </div>
+      <div class="form-group" id="cityGroup">
+        <label>出生城市</label>
+        <input type="text" id="city" placeholder="如：北京">
+      </div>
+      <div class="form-group hidden" id="coordGroup">
+        <label>经度</label>
+        <input type="number" id="longitude" placeholder="东经 (0-180°, 如：116.4)" step="0.01" min="-180" max="180">
+      </div>
+      <div class="form-group hidden" id="latGroup">
+        <label>纬度</label>
+        <input type="number" id="latitude" placeholder="北纬 (0-90°, 如：39.9)" step="0.01" min="-90" max="90">
+      </div>
+      <button class="btn" onclick="saveProfile()">保存信息</button>
+    </div>
+    
+    <div id="chatSection" class="card hidden">
+      <h3 style="margin-bottom:16px;">💬 咨询</h3>
+      <div class="chat-box" id="chatBox"></div>
+      <div style="display:flex;gap:10px;">
+        <textarea id="messageInput" placeholder="请输入您的问题..."></textarea>
+        <button class="btn" onclick="sendMessage()" style="width:auto;padding:12px 20px;">发送</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="app.js"></script>
+</body>
+</html>
+HTMLEOF' && echo '✅ 前端 HTML 已更新'
+
